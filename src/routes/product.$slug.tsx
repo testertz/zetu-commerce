@@ -107,7 +107,7 @@ function ProductPage() {
           <div className="mt-10">
             <h2 className="font-display font-semibold text-xl mb-4">{t("product.specs")}</h2>
             <dl className="rounded-2xl border border-[var(--border)] surface divide-y divide-[var(--border)]">
-              {p.specs.map((s, i) => (
+              {p.specs.map((s: typeof p.specs[number], i: number) => (
                 <div key={i} className="grid grid-cols-2 px-4 py-3 text-sm">
                   <dt className="text-[var(--text-muted)]">{s.label[lang]}</dt>
                   <dd>{s.value}</dd>
