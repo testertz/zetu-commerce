@@ -1,26 +1,18 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { getProduct, formatTZS, products } from "@/lib/products";
+import { useState } from "react";
+import { formatTZS } from "@/lib/products";
+import { useProducts, findProduct } from "@/lib/productStore";
 import { useI18n } from "@/lib/i18n";
 import { waLink } from "@/lib/whatsapp";
 import { ProductCard } from "@/components/ProductCard";
 import { ArrowLeft, MessageCircle, Truck, ShieldCheck, BadgePercent } from "lucide-react";
 
 export const Route = createFileRoute("/product/$slug")({
-  loader: ({ params }) => {
-    const product = getProduct(params.slug);
-    if (!product) throw notFound();
-    return { product };
-  },
-  head: ({ loaderData }) => ({
-    meta: loaderData
-      ? [
-          { title: `${loaderData.product.name} — TechZetu` },
-          { name: "description", content: loaderData.product.description.en },
-          { property: "og:title", content: `${loaderData.product.name} — TechZetu` },
-          { property: "og:description", content: loaderData.product.description.en },
-          { property: "og:image", content: loaderData.product.image },
-        ]
-      : [],
+  head: ({ params }) => ({
+    meta: [
+      { title: `${params.slug} — TechZetu` },
+      { property: "og:title", content: `${params.slug} — TechZetu` },
+    ],
   }),
   notFoundComponent: () => (
     <div className="mx-auto max-w-2xl px-5 py-24 text-center">
@@ -39,8 +31,15 @@ export const Route = createFileRoute("/product/$slug")({
 });
 
 function ProductPage() {
-  const { product: p } = Route.useLoaderData();
+  const { slug } = Route.useParams();
+  const { products } = useProducts();
   const { t, lang } = useI18n();
+  const p = findProduct(products, slug);
+  if (!p) throw notFound();
+
+  const gallery = p.images && p.images.length > 0 ? p.images : [p.image];
+  const [active, setActive] = useState(0);
+
   const msg = t("msg.product", { name: p.name, price: formatTZS(p.price) });
   const related = products.filter((x) => x.category === p.category && x.id !== p.id).slice(0, 4);
 
@@ -51,8 +50,25 @@ function ProductPage() {
       </Link>
 
       <div className="mt-8 grid lg:grid-cols-2 gap-10 lg:gap-16">
-        <div className="rounded-3xl overflow-hidden surface border border-[var(--border)] aspect-square">
-          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+        <div>
+          <div className="rounded-3xl overflow-hidden surface border border-[var(--border)] aspect-square">
+            <img src={gallery[active]} alt={p.name} className="w-full h-full object-cover" />
+          </div>
+          {gallery.length > 1 && (
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {gallery.map((src, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActive(i)}
+                  className={`aspect-square rounded-xl overflow-hidden border-2 transition ${
+                    active === i ? "border-[var(--green)]" : "border-[var(--border)] opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img src={src} alt={`${p.name} ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -107,7 +123,7 @@ function ProductPage() {
           <div className="mt-10">
             <h2 className="font-display font-semibold text-xl mb-4">{t("product.specs")}</h2>
             <dl className="rounded-2xl border border-[var(--border)] surface divide-y divide-[var(--border)]">
-              {p.specs.map((s: typeof p.specs[number], i: number) => (
+              {p.specs.map((s, i) => (
                 <div key={i} className="grid grid-cols-2 px-4 py-3 text-sm">
                   <dt className="text-[var(--text-muted)]">{s.label[lang]}</dt>
                   <dd>{s.value}</dd>
