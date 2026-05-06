@@ -113,6 +113,7 @@ const toForm = (p: Product): FormState => ({
 
 function AdminPage() {
   const { products, upsert, remove, reset } = useProducts();
+  const { logout } = useAdminAuth();
   const [editing, setEditing] = useState<FormState | null>(null);
 
   const startNew = () => setEditing({ ...empty, id: crypto.randomUUID() });
