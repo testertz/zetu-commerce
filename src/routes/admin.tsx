@@ -1,13 +1,64 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useProducts } from "@/lib/productStore";
 import { categories, formatTZS, type Product } from "@/lib/products";
-import { Plus, Pencil, Trash2, X, RotateCcw } from "lucide-react";
+import { useAdminAuth } from "@/lib/adminAuth";
+import { Plus, Pencil, Trash2, X, RotateCcw, Upload, LogOut, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — TechZetu" }, { name: "robots", content: "noindex" }] }),
-  component: AdminPage,
+  component: AdminGate,
 });
+
+function AdminGate() {
+  const { isAuthed } = useAdminAuth();
+  return isAuthed ? <AdminPage /> : <LoginScreen />;
+}
+
+function LoginScreen() {
+  const { login } = useAdminAuth();
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  return (
+    <div className="mx-auto max-w-md px-5 py-24">
+      <div className="rounded-2xl border border-[var(--border)] surface p-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 grid place-items-center rounded-xl bg-[var(--surface2)]">
+            <Lock className="w-5 h-5 text-[var(--green)]" />
+          </div>
+          <div>
+            <h1 className="font-display font-bold text-2xl">Admin login</h1>
+            <p className="text-xs text-[var(--text-muted)]">Authorized staff only.</p>
+          </div>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!login(pw)) setErr("Invalid password");
+          }}
+          className="mt-6 grid gap-3"
+        >
+          <input
+            type="password"
+            autoFocus
+            value={pw}
+            onChange={(e) => { setPw(e.target.value); setErr(""); }}
+            placeholder="Password"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-[var(--border-green)]"
+          />
+          {err && <p className="text-xs text-[var(--amber)]">{err}</p>}
+          <button type="submit" className="rounded-full bg-[var(--green)] text-[var(--primary-foreground)] px-5 py-2.5 text-sm font-semibold hover:bg-[var(--green-dark)]">
+            Sign in
+          </button>
+          <p className="text-xs text-[var(--text-muted)] text-center mt-2">
+            v1 local-only gate. Default password: <code className="text-[var(--text-mid)]">techzetu2026</code>
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
