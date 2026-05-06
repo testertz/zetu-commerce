@@ -73,7 +73,7 @@ type FormState = {
   oldPrice: string;
   stock: string;
   image: string;
-  images: string;
+  images: string[];
   descEn: string;
   descSw: string;
   specs: { label: string; value: string }[];
@@ -89,7 +89,7 @@ const empty: FormState = {
   oldPrice: "",
   stock: "0",
   image: "",
-  images: "",
+  images: [],
   descEn: "",
   descSw: "",
   specs: [{ label: "", value: "" }],
