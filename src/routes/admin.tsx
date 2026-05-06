@@ -369,3 +369,110 @@ function Field({
     </div>
   );
 }
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageUploader({
+  main, gallery, onChange,
+}: {
+  main: string;
+  gallery: string[];
+  onChange: (main: string, gallery: string[]) => void;
+}) {
+  const mainRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput] = useState("");
+
+  const handleMain = async (files: FileList | null) => {
+    if (!files || !files[0]) return;
+    const url = await fileToDataUrl(files[0]);
+    onChange(url, gallery);
+  };
+
+  const handleGallery = async (files: FileList | null) => {
+    if (!files) return;
+    const urls = await Promise.all(Array.from(files).map(fileToDataUrl));
+    onChange(main || urls[0], [...gallery, ...urls]);
+  };
+
+  const addUrl = () => {
+    const v = urlInput.trim();
+    if (!v) return;
+    onChange(main || v, [...gallery, v]);
+    setUrlInput("");
+  };
+
+  const removeAt = (i: number) => {
+    const next = gallery.filter((_, j) => j !== i);
+    onChange(main, next);
+  };
+
+  return (
+    <div className="grid gap-3">
+      <div>
+        <Label>Main image <span className="text-[var(--green)]">*</span></Label>
+        <div className="mt-1 flex items-center gap-3">
+          <div className="w-20 h-20 rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden grid place-items-center">
+            {main ? <img src={main} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-[var(--text-muted)]">None</span>}
+          </div>
+          <button
+            type="button"
+            onClick={() => mainRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:border-[var(--border-green)]"
+          >
+            <Upload className="w-4 h-4" /> Upload main
+          </button>
+          <input ref={mainRef} type="file" accept="image/*" hidden onChange={(e) => handleMain(e.target.files)} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Gallery images</Label>
+        <div className="mt-1 grid grid-cols-4 sm:grid-cols-6 gap-2">
+          {gallery.map((src, i) => (
+            <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-[var(--border)]">
+              <img src={src} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition"
+                aria-label="Remove"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => galleryRef.current?.click()}
+            className="aspect-square rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--border-green)] grid place-items-center text-xs text-[var(--text-muted)]"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Upload className="w-4 h-4" />
+              Add
+            </div>
+          </button>
+          <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleGallery(e.target.files)} />
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="Or paste image URL…"
+            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--border-green)]"
+          />
+          <button type="button" onClick={addUrl} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:border-[var(--border-green)]">
+            Add URL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
