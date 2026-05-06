@@ -160,6 +160,12 @@ function AdminPage() {
             <RotateCcw className="w-4 h-4" /> Reset
           </button>
           <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm hover:border-[var(--border-green)]"
+          >
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+          <button
             onClick={startNew}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--green)] text-[var(--primary-foreground)] px-4 py-2 text-sm font-semibold hover:bg-[var(--green-dark)]"
           >
