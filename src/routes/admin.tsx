@@ -105,7 +105,7 @@ const toForm = (p: Product): FormState => ({
   oldPrice: p.oldPrice ? String(p.oldPrice) : "",
   stock: String(p.stock),
   image: p.image,
-  images: (p.images || []).join("\n"),
+  images: p.images || [],
   descEn: p.description.en,
   descSw: p.description.sw,
   specs: p.specs.map((s) => ({ label: s.label.en, value: s.value })),
