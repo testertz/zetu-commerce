@@ -67,14 +67,16 @@ function RootComponent() {
   return (
     <I18nProvider>
       <ProductProvider>
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <main className="flex-1">
-            <Outlet />
-          </main>
-          <Footer />
-          <FloatingWA />
-        </div>
+        <AdminAuthProvider>
+          <div className="min-h-screen flex flex-col">
+            <Navbar />
+            <main className="flex-1">
+              <Outlet />
+            </main>
+            <Footer />
+            <FloatingWA />
+          </div>
+        </AdminAuthProvider>
       </ProductProvider>
     </I18nProvider>
   );
