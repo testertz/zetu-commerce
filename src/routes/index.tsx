@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
-import { products, formatTZS } from "@/lib/products";
+import { formatTZS } from "@/lib/products";
+import { useProducts } from "@/lib/productStore";
 import { ProductCard } from "@/components/ProductCard";
 import { waLink } from "@/lib/whatsapp";
 import { MessageCircle, ShoppingBag, ShieldCheck, Truck, BadgePercent, ArrowRight } from "lucide-react";
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { t } = useI18n();
+  const { products } = useProducts();
   const featured = products.filter((p) => p.featured).slice(0, 4);
 
   return (
