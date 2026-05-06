@@ -37,25 +37,61 @@ function ShopPage() {
 
   const list = useMemo(() => {
     let l = products;
-    if (cat !== "all") l = l.filter((p) => p.category === cat);
+    let activeCat: Product["category"] | "all" = cat;
+    let smartMax: number | null = null;
+    let smartMin: number | null = null;
+
     const query = q.trim().toLowerCase();
+    let cleaned = query;
+
     if (query) {
-      const underMatch = query.match(/under\s+(\d+)\s*(k|m)?/);
+      // Detect category keywords in the query
+      const catMap: Record<string, Product["category"]> = {
+        phone: "phones", phones: "phones", smartphone: "phones",
+        laptop: "laptops", laptops: "laptops", computer: "laptops",
+        audio: "audio", headphone: "audio", headphones: "audio", earbuds: "audio", speaker: "audio",
+        accessory: "accessories", accessories: "accessories", charger: "accessories", cable: "accessories",
+        wearable: "wearables", wearables: "wearables", watch: "wearables", smartwatch: "wearables",
+      };
+      for (const [kw, c] of Object.entries(catMap)) {
+        const re = new RegExp(`\\b${kw}\\b`);
+        if (re.test(cleaned)) {
+          if (activeCat === "all") activeCat = c;
+          cleaned = cleaned.replace(re, "").trim();
+        }
+      }
+
+      // "under 500k", "under 1m", "under 500000"
+      const underMatch = cleaned.match(/under\s+(\d+(?:\.\d+)?)\s*(k|m)?/);
       if (underMatch) {
-        const n = parseInt(underMatch[1]);
+        const n = parseFloat(underMatch[1]);
         const mult = underMatch[2] === "m" ? 1_000_000 : underMatch[2] === "k" ? 1000 : 1;
-        l = l.filter((p) => p.price <= n * mult);
+        smartMax = n * mult;
+        cleaned = cleaned.replace(underMatch[0], "").trim();
       }
-      const cleaned = query.replace(/under\s+\d+\s*(k|m)?/, "").trim();
-      if (cleaned) {
-        l = l.filter(
-          (p) =>
-            p.name.toLowerCase().includes(cleaned) ||
-            p.brand.toLowerCase().includes(cleaned) ||
-            p.category.includes(cleaned),
-        );
+      // "over 500k"
+      const overMatch = cleaned.match(/over\s+(\d+(?:\.\d+)?)\s*(k|m)?/);
+      if (overMatch) {
+        const n = parseFloat(overMatch[1]);
+        const mult = overMatch[2] === "m" ? 1_000_000 : overMatch[2] === "k" ? 1000 : 1;
+        smartMin = n * mult;
+        cleaned = cleaned.replace(overMatch[0], "").trim();
       }
+      cleaned = cleaned.replace(/\s+/g, " ").trim();
     }
+
+    if (activeCat !== "all") l = l.filter((p) => p.category === activeCat);
+    if (smartMax !== null) l = l.filter((p) => p.price <= smartMax!);
+    if (smartMin !== null) l = l.filter((p) => p.price >= smartMin!);
+
+    if (cleaned) {
+      const terms = cleaned.split(/\s+/).filter(Boolean);
+      l = l.filter((p) => {
+        const hay = `${p.name} ${p.brand} ${p.category}`.toLowerCase();
+        return terms.every((t) => hay.includes(t));
+      });
+    }
+
     if (minPrice !== "") l = l.filter((p) => p.price >= Number(minPrice));
     if (maxPrice !== "") l = l.filter((p) => p.price <= Number(maxPrice));
 

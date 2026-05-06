@@ -1,13 +1,64 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useProducts } from "@/lib/productStore";
 import { categories, formatTZS, type Product } from "@/lib/products";
-import { Plus, Pencil, Trash2, X, RotateCcw } from "lucide-react";
+import { useAdminAuth } from "@/lib/adminAuth";
+import { Plus, Pencil, Trash2, X, RotateCcw, Upload, LogOut, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — TechZetu" }, { name: "robots", content: "noindex" }] }),
-  component: AdminPage,
+  component: AdminGate,
 });
+
+function AdminGate() {
+  const { isAuthed } = useAdminAuth();
+  return isAuthed ? <AdminPage /> : <LoginScreen />;
+}
+
+function LoginScreen() {
+  const { login } = useAdminAuth();
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  return (
+    <div className="mx-auto max-w-md px-5 py-24">
+      <div className="rounded-2xl border border-[var(--border)] surface p-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 grid place-items-center rounded-xl bg-[var(--surface2)]">
+            <Lock className="w-5 h-5 text-[var(--green)]" />
+          </div>
+          <div>
+            <h1 className="font-display font-bold text-2xl">Admin login</h1>
+            <p className="text-xs text-[var(--text-muted)]">Authorized staff only.</p>
+          </div>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!login(pw)) setErr("Invalid password");
+          }}
+          className="mt-6 grid gap-3"
+        >
+          <input
+            type="password"
+            autoFocus
+            value={pw}
+            onChange={(e) => { setPw(e.target.value); setErr(""); }}
+            placeholder="Password"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-[var(--border-green)]"
+          />
+          {err && <p className="text-xs text-[var(--amber)]">{err}</p>}
+          <button type="submit" className="rounded-full bg-[var(--green)] text-[var(--primary-foreground)] px-5 py-2.5 text-sm font-semibold hover:bg-[var(--green-dark)]">
+            Sign in
+          </button>
+          <p className="text-xs text-[var(--text-muted)] text-center mt-2">
+            v1 local-only gate. Default password: <code className="text-[var(--text-mid)]">techzetu2026</code>
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -22,7 +73,7 @@ type FormState = {
   oldPrice: string;
   stock: string;
   image: string;
-  images: string;
+  images: string[];
   descEn: string;
   descSw: string;
   specs: { label: string; value: string }[];
@@ -38,7 +89,7 @@ const empty: FormState = {
   oldPrice: "",
   stock: "0",
   image: "",
-  images: "",
+  images: [],
   descEn: "",
   descSw: "",
   specs: [{ label: "", value: "" }],
@@ -54,7 +105,7 @@ const toForm = (p: Product): FormState => ({
   oldPrice: p.oldPrice ? String(p.oldPrice) : "",
   stock: String(p.stock),
   image: p.image,
-  images: (p.images || []).join("\n"),
+  images: p.images || [],
   descEn: p.description.en,
   descSw: p.description.sw,
   specs: p.specs.map((s) => ({ label: s.label.en, value: s.value })),
@@ -62,6 +113,7 @@ const toForm = (p: Product): FormState => ({
 
 function AdminPage() {
   const { products, upsert, remove, reset } = useProducts();
+  const { logout } = useAdminAuth();
   const [editing, setEditing] = useState<FormState | null>(null);
 
   const startNew = () => setEditing({ ...empty, id: crypto.randomUUID() });
@@ -81,7 +133,7 @@ function AdminPage() {
       oldPrice: editing.oldPrice ? Number(editing.oldPrice) : undefined,
       stock: Number(editing.stock) || 0,
       image: editing.image,
-      images: editing.images.split("\n").map((s) => s.trim()).filter(Boolean),
+      images: editing.images.filter(Boolean),
       description: { en: editing.descEn, sw: editing.descSw || editing.descEn },
       specs: editing.specs
         .filter((s) => s.label && s.value)
@@ -106,6 +158,12 @@ function AdminPage() {
             className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm hover:border-[var(--border-green)]"
           >
             <RotateCcw className="w-4 h-4" /> Reset
+          </button>
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm hover:border-[var(--border-green)]"
+          >
+            <LogOut className="w-4 h-4" /> Logout
           </button>
           <button
             onClick={startNew}
@@ -205,17 +263,11 @@ function AdminPage() {
                 <Field label="Old price" type="number" value={editing.oldPrice} onChange={(v) => setEditing({ ...editing, oldPrice: v })} />
               </div>
               <Field label="Stock" type="number" value={editing.stock} onChange={(v) => setEditing({ ...editing, stock: v })} required />
-              <Field label="Main image URL" value={editing.image} onChange={(v) => setEditing({ ...editing, image: v })} required />
-              <div>
-                <Label>Gallery image URLs (one per line)</Label>
-                <textarea
-                  value={editing.images}
-                  onChange={(e) => setEditing({ ...editing, images: e.target.value })}
-                  rows={3}
-                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-mono"
-                  placeholder="https://...\nhttps://..."
-                />
-              </div>
+              <ImageUploader
+                main={editing.image}
+                gallery={editing.images}
+                onChange={(image, images) => setEditing({ ...editing, image, images })}
+              />
               <div>
                 <Label>Description (EN)</Label>
                 <textarea
@@ -314,6 +366,113 @@ function Field({
         required={required}
         className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--border-green)]"
       />
+    </div>
+  );
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageUploader({
+  main, gallery, onChange,
+}: {
+  main: string;
+  gallery: string[];
+  onChange: (main: string, gallery: string[]) => void;
+}) {
+  const mainRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput] = useState("");
+
+  const handleMain = async (files: FileList | null) => {
+    if (!files || !files[0]) return;
+    const url = await fileToDataUrl(files[0]);
+    onChange(url, gallery);
+  };
+
+  const handleGallery = async (files: FileList | null) => {
+    if (!files) return;
+    const urls = await Promise.all(Array.from(files).map(fileToDataUrl));
+    onChange(main || urls[0], [...gallery, ...urls]);
+  };
+
+  const addUrl = () => {
+    const v = urlInput.trim();
+    if (!v) return;
+    onChange(main || v, [...gallery, v]);
+    setUrlInput("");
+  };
+
+  const removeAt = (i: number) => {
+    const next = gallery.filter((_, j) => j !== i);
+    onChange(main, next);
+  };
+
+  return (
+    <div className="grid gap-3">
+      <div>
+        <Label>Main image <span className="text-[var(--green)]">*</span></Label>
+        <div className="mt-1 flex items-center gap-3">
+          <div className="w-20 h-20 rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden grid place-items-center">
+            {main ? <img src={main} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-[var(--text-muted)]">None</span>}
+          </div>
+          <button
+            type="button"
+            onClick={() => mainRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:border-[var(--border-green)]"
+          >
+            <Upload className="w-4 h-4" /> Upload main
+          </button>
+          <input ref={mainRef} type="file" accept="image/*" hidden onChange={(e) => handleMain(e.target.files)} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Gallery images</Label>
+        <div className="mt-1 grid grid-cols-4 sm:grid-cols-6 gap-2">
+          {gallery.map((src, i) => (
+            <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-[var(--border)]">
+              <img src={src} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition"
+                aria-label="Remove"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => galleryRef.current?.click()}
+            className="aspect-square rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--border-green)] grid place-items-center text-xs text-[var(--text-muted)]"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Upload className="w-4 h-4" />
+              Add
+            </div>
+          </button>
+          <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleGallery(e.target.files)} />
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="Or paste image URL…"
+            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--border-green)]"
+          />
+          <button type="button" onClick={addUrl} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:border-[var(--border-green)]">
+            Add URL
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
