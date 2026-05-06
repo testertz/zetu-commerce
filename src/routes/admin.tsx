@@ -256,17 +256,11 @@ function AdminPage() {
                 <Field label="Old price" type="number" value={editing.oldPrice} onChange={(v) => setEditing({ ...editing, oldPrice: v })} />
               </div>
               <Field label="Stock" type="number" value={editing.stock} onChange={(v) => setEditing({ ...editing, stock: v })} required />
-              <Field label="Main image URL" value={editing.image} onChange={(v) => setEditing({ ...editing, image: v })} required />
-              <div>
-                <Label>Gallery image URLs (one per line)</Label>
-                <textarea
-                  value={editing.images}
-                  onChange={(e) => setEditing({ ...editing, images: e.target.value })}
-                  rows={3}
-                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-mono"
-                  placeholder="https://...\nhttps://..."
-                />
-              </div>
+              <ImageUploader
+                main={editing.image}
+                gallery={editing.images}
+                onChange={(image, images) => setEditing({ ...editing, image, images })}
+              />
               <div>
                 <Label>Description (EN)</Label>
                 <textarea
