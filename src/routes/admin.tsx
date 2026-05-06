@@ -132,7 +132,7 @@ function AdminPage() {
       oldPrice: editing.oldPrice ? Number(editing.oldPrice) : undefined,
       stock: Number(editing.stock) || 0,
       image: editing.image,
-      images: editing.images.split("\n").map((s) => s.trim()).filter(Boolean),
+      images: editing.images.filter(Boolean),
       description: { en: editing.descEn, sw: editing.descSw || editing.descEn },
       specs: editing.specs
         .filter((s) => s.label && s.value)
